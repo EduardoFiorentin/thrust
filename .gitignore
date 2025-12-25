@@ -1,2 +1,4 @@
 .vscode
 *.o
+tests
+antigo_readme.txt
