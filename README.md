@@ -1,236 +1,297 @@
+# Projeto – Gerador de Dados Estruturados
 
-# Projeto - Gerador de dados estruturados
+## Ideias de nomes
+- nexus  
+- datastorm  
+- gridstorm  
+- thrust  
 
-## Idéias de nomes 
-- nexus
-- datastorm
-- gridstorm
-- thrust
+---
 
 ## Introdução
-Este projeto tem foi desenvolvido com o intuito de praticar habilidades de programação em linguagem C, bem como conceitos avançados como paralelismo e concorrência, programação multi-thread, manipulação de arquivos e conexão com bancos de dados.
+Este projeto tem como objetivo principal **praticar programação em C em nível avançado**, explorando conceitos como:
 
-## Idéia central 
-A idéia deste projeto é desenvolver um sistema estruturado e desacoplado baseado em 3 módulos: 
-<br>
+- Arquitetura modular e desacoplada  
+- Paralelismo e concorrência  
+- Programação multi-thread  
+- Manipulação de arquivos  
+- Persistência de dados em bancos relacionais  
 
-- **Core**: Módulo central, responsável pela inicialização do sistema e pelo gerenciamento dos recursos necessários para a integração dos outros 2 módulos a seguir. Responsável também por guardar o buffer de armazenamento dos dados gerados;
-<br>
+O foco não é apenas gerar dados, mas **construir um sistema extensível, previsível e arquiteturalmente sólido**.
 
-- **Source**: Responsável por interpretar um arquivo de configuração de dados fornecido pelo usuário (schema) e efetuar a geração de dados aleatórios estruturados baseados no modelo de dados. Os dados são gerados e enviados para um **pipeline** no modelo **produtor-consumidor**, para posteriormente serem lidos pelo módulo targe;
-<br>
+---
 
-- **Target**: Responsável pela persistência dos dados gerados no ponto alvo requerido (banco de dados, por exemplo). Implementação inicial utiliza o Postgres como alvo. Seu objetivo é ler os dados enviados ao pipeline pelo módulo source, montar lotes de tamanho configurável e, então, enviá-los para persistência no target desejado;
-
-<br>
-
-
-
-## Buffer de armazenamento de dados
-Todos os dados gerados serão enviados a um buffer intermediário, que funcionará como uma pipeline com controle de concorrência no modelo produtor-consumidor. 
-
-O buffer deve ser thread-safe, bloqueante e backpressure (com limite de tamanho).
-- Source: 
-    - Gera registros e tenta inserir no buffer
-    - Gera e insere um registro por vez.
-    - Se buffer estiver cheio: espera.
-    - Se o contador do buffer atingir o limite estabelecido, source finaliza.
-
-- Target: 
-    - Retira registros do buffer e envia para o target de persistência;
-    - Se não há o número de registros necessário para formar o lote: 
-        - Se Source ainda não finalizou: **espera**;
-        - Se Source já finalizou: **envia lote parcial**.
-    - Se buffer estiver vazio: espera.
-    - Se o contador do buffer atingiu o limite estabelecido e o buffer está vazio, target finaliza.
-
-Logo, o buffer mantém 3 estados implícitos: 
-1. **Normal**: Source pode inserir e target pode retirar.
-
-2. **Source finalizado**: Nenhum novo dado será produzido, mas Target continua consumindo até esvaziar
-3. **Encerrado**: Buffer vazio, source e target finalizaram e retornaram.
-
-
-O tamanho máximo do buffer deve ser definido pelo usuário no arquivo de configuração (Genfile.toml, descrito mais a frente). A implementação deve considerar um tamanho viável para a quantidade de memória disponível caso o usuário não o defina.
-
-## Responsabilidades 
-Importante que cada módulo se atenha à sua própria responsabilidade:
-
-- Core: Apenas inicializa e gerencia as threads dos outros módulos e suas dependências comuns (semáforos, buffers, etc);
-- Target: Abre e gerencia conexões com bancos de dados / arquivos de persistência, envia dados e fecha conexões antes de finalizar;
-- Source: Gerencia arquivos e geradores necessários para a geração de dados.   
-
-
-## Genfile.toml
-Todas as configurações para geração estruturada de dados deve ser descrita em um arquivo de configuração denominado Genfile.toml. 
-
-Este arquivo é responsável por: 
-- Descrever o schema lógico dos dados;
-- Descrever as regras de geração
-- Descrever os relacionamentos
-- Descrever o destino dos dados
-
-
-### Exemplo
-
-``` toml
-    [hello]
-    chave = valor
+## Organização de diretórios
+``` text
+montar
 ```
 
+---
 
-## Detalhes dos módulos 
+## Ideia central
+O sistema é organizado em **três módulos principais**, cada um com responsabilidade bem definida:
 
-Esta seção se dedica a especificar detalhes de implementação de cada um dos módulos do sistema.
+### Core
+- Inicializa o sistema
+- Lê o arquivo de configuração (`Genfile.toml`)
+- Cria e gerencia recursos compartilhados:
+  - Buffer thread-safe
+  - Semáforos / mutex
+- Inicializa e sincroniza as threads do **Source** e do **Target**
+- Controla o ciclo de vida da aplicação
 
+### Source
+- Interpreta o schema descrito no `Genfile.toml`
+- Gera dados estruturados conforme as regras definidas
+- Atua como **produtor** no modelo produtor–consumidor
+- Envia registros gerados para o buffer intermediário
+
+### Target
+- Atua como **consumidor**
+- Lê registros do buffer
+- Agrupa registros em lotes configuráveis
+- Persiste os dados no destino configurado (PostgreSQL na versão inicial)
+- Gerencia suas próprias conexões e recursos
+
+---
+
+## Buffer de armazenamento de dados
+O buffer funciona como um **pipeline produtor–consumidor**, com as seguintes características:
+
+- Thread-safe  
+- Bloqueante  
+- Com backpressure (tamanho máximo configurável)  
+
+### Comportamento do Source
+- Gera um registro por vez
+- Tenta inserir no buffer
+- Se o buffer estiver cheio → espera
+- Ao atingir o número total de registros → finaliza
+
+### Comportamento do Target
+- Remove registros do buffer
+- Forma lotes para persistência
+- Se não houver registros suficientes:
+  - Source ativo → espera
+  - Source finalizado → envia lote parcial
+- Finaliza quando:
+  - Source terminou **e**
+  - Buffer está vazio
+
+### Estados implícitos do buffer
+1. **Normal** – produção e consumo ativos  
+2. **Source finalizado** – apenas consumo  
+3. **Encerrado** – buffer vazio, threads finalizadas  
+
+O tamanho máximo do buffer é definido no `Genfile.toml`. Caso não seja especificado, o sistema escolhe um valor seguro com base em memória disponível.
+
+---
+
+## Responsabilidades dos módulos
+Separação rígida de responsabilidades é **regra**, não sugestão:
+
+- **Core**
+  - Gerencia threads
+  - Gerencia buffer e sincronização
+  - Não gera dados
+  - Não persiste dados
+
+- **Source**
+  - Gerencia geração de dados
+  - Gerencia contexto de geração
+  - Não conhece destino final dos dados
+
+- **Target**
+  - Gerencia persistência
+  - Abre e fecha conexões
+  - Não conhece regras de geração
+
+---
+
+## Genfile.toml
+Arquivo de configuração central do sistema.
+
+Responsável por:
+- Definir o schema lógico dos dados
+- Definir regras de geração
+- Definir relacionamentos
+- Definir destino e parâmetros de persistência
+- Definir limites (buffer, lotes, seeds, etc.)
+
+### Exemplo simplificado
+```toml
+[dataset]
+records = 100000
+buffer_size = 5000
+
+[user.id]
+type = "sequence"
+
+[user.name]
+type = "name"
+
+[user.email]
+type = "email"
+
+```
+
+## Módulos 
 
 ### Source 
-Seu objetivo é, em suma, gerar dados estruturados de forma coerente e organizada, e então disponibiliza-los para uso posterior em um buffer localizado no módulo Core.
+O módulo source é responsável por toda a geração de dados. Sua estrutura é dividida em 4 módulos:
+- Orchestrador (`source.c`)
+- Services (`services/**.c`)
+- Generators (`generators/**.c`)
+- Context (`context.c`)
 
-Suas responsabilidades se atém ao controle das dependências necessárias para a geração dos dados.
-
-O módulo source é formado por outros 3 submódulos, sendo eles: 
-- source orchestrator:
-    - Responsabilidades: 
-        - Ler o schema do Genfile.toml
-        - Controlar quantidade de registros
-        - Gerenciar e chamar os geradores quando necessário 
-        - Definir quais as regras de geração de registros
-        - Montar registros 
-        - Enviar registros para o buffer
-
-- Geradores de campo (Field generators)
-    - Responsabilidades: 
-        - 
-    - Atuação: 
-        - Recebe um contexto e parametros necessários (de acordo com cada gerador)
-        - Retorna o valor gerado 
-    - Tipos: 
-        - Geradores **stateless**: Mais simples - não guarda estados, apenas é chamado e retorna um valor.
-            - string aleatória
-            - inteiro aleatório
-            - UUID
-            - hash
-        - Geradores **statefull**: Mais complexos - guardam valores internos usados para geração. 
-            - número sequencial
-            - contador global
-            - índice incremental
-        - Geradores **referenciados**: Geradores responsáveis por popular campos com relacionamento.
-            - Qualquer campo que venha de registros criados anteriormente. 
-            - Deve detectar anteriormente quais campos são usados como chave estrangeira e guardar os valores necessários - lookup no contexto. 
-            - Soluções possíveis: 
-                - pool de valores já gerados (pode servir bem quando a chave estrangeira usada pode ser de qualquer registro já gerado anteriormente)
-                - cache limitado: guarda algúns dos registros já criados (normalmente os necessários apenas)
-                - lookup no contexto
-                - geração de todos os necessários para completar o relacionamento em sequência - não funcionaria para todos os casos, mas é uma forma mais simples e com menos buscas externas pesadas.
-
-Cada um dos registros que será gerado deve seguir uma ordem lógica simples: 
-
-- Criar um registro vazio
-- Percorre os campos definidos no schema
-- Para cada campo:
-    - identifica o gerador
-    - chama o gerador com:
-        - contexto
-        - parâmetros
-        - registro parcial
-    - adiciona o valor ao registro
-
-- envia o registro para o buffer
-
-
-O esquema a seguir mostra a organização do diretório do módulo source. 
+#### Estruturação do módulo
+O módulo se encontra no diretório source do projeto, e está dividido da seguinte forma:
 ``` text
 source/
- ├── source.c                   // orquestrador
- ├── context.c                  // estado compartilhado
- ├── generators/                // geradores de dados 
+ ├── source.c              // orquestrador
+ ├── context.c             // gerenciamento de estado
+ ├── services/             // lógica de geração
+ │   ├── random_service.c
+ │   ├── sequence_service.c
+ │   ├── dictionary_service.c
+ │   └── reference_service.c
+ ├── generators/           // composição de services
  │   ├── name_gen.c
  │   ├── cpf_gen.c
  │   ├── phone_gen.c
- │   ├── uuid_gen.c
- │   ├── seq_gen.c
- │   ├── random_int_gen.c
- │   ├── derived_gen.c
- │   └── ref_gen.c
+ │   ├── email_gen.c
+ │   └── derived_gen.c
 ```
 
-## Context 
+A seguir, os submódulos do módulo source são listados e descritos de forma detalhada, bem como suas atribuições e subdivisões.
 
-Este é um serviço de estado que atua como persistidor de informações para os geradores de dados entre gerações diferentes. O objetivo principal é centralizar todas as informações necessárias para atuação dos geradores sem que estes guardem informações relevantes entre gerações, como endereços de arquivos de dados ou informações sobre gerações anteriores.
+#### Orchestrador
+Responsável por: 
+- Ler o schema do `Genfile.toml`
+- Controlar o número total de registros
+- Decidir quais generators iniciar e usar para cada campo de registro gerado.
+- Orquestrar a criação de cada registro.
+- Enviar registros ao buffer. 
 
-Geradores devem ser, ao máximo possível, funções de execução efêmera, sem persistência de estado por conta própria, tendo como única responsabilidade o conhecimento sobre a geração do seu próprio tipo de dado, gerando previsibilidade e testabilidade. 
+#### Services
+São os motores responsáveis pela geração de dados. Construídos de forma genérica e reutilizável.
 
-A estrutura do contexto segue o seguinte padrão: 
+Características:
+- Implementam toda a lógica de geração
+- Podem manter estado interno no contexto
+- São reutilizáveis
+- Não conhecem schema nem campos específicos, apenas são chamados e geram dados de acordo com sua responsabilidade e o estado do seus campos do contexto.
+
+Tipos de services:
+- Stateless
+    - Inteiro aleatório
+    - String aleatória
+    - UUID
+    - Hash
+- Stateful
+    - Sequências
+    - Contadores
+    - Índices incrementais
+- Referenciados
+    - Lookup de chaves estrangeiras
+    - Pools de valores já gerados
+    - Cache limitado de referências
+
+#### Generators
+Responsáveis por combinar services para gerar um tipo de dado específico.
+
+Características:
+- Stateless
+- Não armazenam estado
+- Não implementam algoritmos complexos
+- Apenas coordenam chamadas aos services
+
+Exemplos:
+- name_generator
+- cpf_generator
+- email_generator
+- phone_generator
+- derived_generator
+
+#### Context
+
+Objeto central de estado da geração.
+
+Função:
+- Armazenar estados compartilhados
+- Garantir previsibilidade
+- Permitir reprodutibilidade
+- Evitar estado espalhado pelo código
+- Estrutura conceitual:
 
 ``` text
 SourceContext
- ├── RandomContext          
+ ├── RandomContext
  ├── SequenceContext
  ├── DictionaryContext
  ├── ReferenceContext
  └── StatsContext
 ```
 
-- RandomContext: 
-Responsável pelas variáveis relacionadas à geração aleatória (seeds) - garantia de reprodutibilidade 
-
-- SequenceContext:
-Guarda contadores por campo, steppers e valores iniciais declarados no Genfile. Tudo o que é necessário para geração de qualquer tipo de sequências.  
-
+- RandomContext
+    - Seeds
+    - Reprodutibilidade
+- SequenceContext
+    - Contadores por campo
+    - Valores iniciais
+    - Steppers
 - DictionaryContext
-Guarda arquivos de dicionários (usados para geração de dados que fazem sentido), tamanhos e indices.
-
+    - Arquivos de dicionários
+    - Índices
+    - Tamanhos
 - ReferenceContext
-Guarda informações necessárias para criação de relacionamentos, como pools de valores já gerados, índices válidos, limites de memória (cache), etc. 
-**Formato ainda a definir**
-
+    - Pools de chaves estrangeiras
+    - Cache limitado
+    - Estratégias de lookup
 - StatsContext
-Guarda estatísticas da geração, como número de registros já gerados e enviados, numero de erros, etc.
+    - Registros gerados
+    - Registros enviados
+    - Erros
+    - Estatísticas gerais 
 
-Comunicação gerador-contexto é simples. O gerador recebe o endereço do contexto por parâmetro, lê o que precisar, salva o que precisar e finaliza. A thread de geração é única, então não há necessidade de controle de concorrência no acesso.
+⚠️ Importante:
 
-### Montagem do Context
-Inicialmente, o core lê o schema declarado no arquivo de configuração, e então monta o context no formato necessário. A montagem inclui alocação de contadores, ponteiros para dicionários (arquivos de dados) e ponteiros para pools necessários. **O schema define o que será guardado**
+- Geradores nunca acessam estruturas internas diretamente
 
-### !ATENÇÃO!
-Evitar os seguintes casos: 
-❌ Contexto como void* genérico
-❌ Contexto com campos públicos acessados direto
-❌ Geradores mexendo em estrutura interna
-❌ “context->whatever++” espalhado pelo código
+- Comunicação sempre via funções bem definidas
 
+#### Fluxo de geração de um registro
 
-## Idéias extras
-- Seeds reprodutiveis - permitem gerar o mesmo dataset mais de uma vez
-- Distribuições estatísticas personalizadas - 
-    - Normalmente pensamos em manter a distribuição dos dados aleatória (uniforme), mas existem outras que podem ser interessantes, como: 
-        - Normal
-        - Exponencial 
-        - Zipf
+Cada registro é gerado de forma independente seguindo os seguintes passos.  
 
-- Dicionários costumizados 
-    - Pensar em uma forma de escrever e adicionar regras condicionais
-    Ex: if idade < 18 ? sem CNH : com CNH
-        if pais == "Brasil" ? CPF : code
-
-<br>
-<br>
-<br>
-<br>
-<br>
-
-1. Modulo core inicia os modulos source e target, além de um buffer que servirá para guardar os dados gerados. Minha idéia é que os dois módulos rodem em threads dedicadas, com o source gerando os dados e jogando para uma lista encadeada, e o target pegando os dados da lista encadeada e enviando em lotes para o banco de dados (preciso de uma especificação de como isso funcionaria precisamente). 
-
-2. Além de iniciar os módulos, o core também lê um arquivo de configuração que quero chamar de Genfile.json (ou outro formato mais conveniente, aceito sugestões), que contêm todas as especificações de configuração necessárias, como formato dos dados (schema), de onde vem (arquivo pré-gerado, hash aleatório), relacionamentos, como serão gerados os dados, etc.
-
-``` C
-
-```
+- Criar registro vazio (alocação de memória).
+- Iterar campos do registro. 
+Para cada campo:
+    - Identificar generator necessário
+    - Chamar generator com:
+        - Context
+        - Parâmetros
+        - Registro parcial
+- Adicionar valor ao registro
+- Enviar registro ao buffer
 
 
-3. Após iniciados os módulos, cada um começa a fazer sua função, rodando em paralelo para uma maior eficiência (sendo sincero, o meu objetivo usando paralelismo é para aprender mesmo, não acho tão necessário) 
 
-4. Após a quantidade de dados ser gerada, a thread source retorna, e após todos estarem salvos, a thread target retorna, e então o módulo core finaliza.
 
-Creio que cada módulo possa ser independente e gerenciar seus próprios recursos, por exemplo, target abre e fecha sua própria conexão, source gerencia seus arquivos abertos, e por aí vai 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
