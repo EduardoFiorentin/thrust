@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "source.h"
 #include "services/random_service.h"
+#include "../main.h"
 
 // internal function - used to print signed messages
 void source_print(const char* message) {
@@ -56,10 +57,4 @@ int run_thread_source(Genfile* genfile, Context* context) {
     init_source(genfile, context);
     run_source(genfile, context);
     shutdown_source(context);
-}
-
-// TODO implement config file verifications
-// Better to change this to another module 
-int validade_config_file(Genfile* genfile) {
-    return 1;
 }
