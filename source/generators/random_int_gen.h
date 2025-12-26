@@ -3,6 +3,12 @@
 
 #include "../source.h"
 
-int generate_random_age(Context* ctx);
+typedef struct {
+    int min;
+    int max;
+} RandomIntParams;
+
+FieldValue random_int_gen(Context* context, const FieldSpec* spec, const Record* record);
+
 
 #endif

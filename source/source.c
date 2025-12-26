@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "source.h"
-#include "services/random_service.h"
+#include "generators/random_int_gen.h"
 #include "../main.h"
 
 // internal function - used to print signed messages
@@ -35,9 +35,21 @@ void run_source(Genfile* genfile, Context* context) {
     // while not finished
         // generate new register 
         // send to shared buffer 
+    FieldSpec fs;
+    RandomIntParams rip; 
+    Record rec;
+    
+
+    rip.max = 1000;
+    rip.min = 30;
+
+    fs.generator = "";
+    fs.name = "Campo teste";        // talvez nem precise ser guardado
+    fs.params = &rip;  // verificar se passar assim como endereço mantém os valores válidos
+    
     for (int i = 0; i < 5; i++) {
-        int v = random_service_next(context, 50);
-        printf("Generated: %d\n", v);
+        FieldValue v = random_int_gen(context, &fs, &rec);
+        printf("Generated: %d\n", v.value.i);
     }
     
     source_print("Source module finished.");

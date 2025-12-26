@@ -213,6 +213,111 @@ Exemplos:
 - phone_generator
 - derived_generator
 
+
+##### Interface padrão
+
+Para fins de padronização no uso dos generators, todas as implementações devem a seguinte implementação: 
+
+```c 
+// descrição dos parametros vindos do Genfile
+typedef struct { 
+    const char* name;
+    const char* generator;
+    void*       params;     // parseado
+} FieldSpec;
+
+// descrição da assinatura dos generators
+typedef FieldValue (*GeneratorFn)( 
+    Context* context,
+    const FieldSpec* field_spec,
+    const Record* partial_record
+);
+
+
+```
+
+`void* params`: struct específica para cada generator que descreve seus possíveis parâmetros.
+
+##### Exemplo de implementação
+
+Para a configuração de campo a seguir:
+```toml 
+[user.age]
+generator = "random_int"
+min = 18
+max = 65
+```
+
+temos o parametro `nome` do campo com valor `age`, o gerador escolhido é `random_int`, que possui os parâmetros `min` e `max`.
+
+Estes parâmetros descrevem como o valor será gerado. 
+
+Cada generator define explicitamente quais parâmetros aceita por meio de uma struct própria. No caso do `random_int`, os parâmetros possíveis são descritos pela struct:
+``` c 
+// Descrição dos parâmetros para o random_int generator
+typedef struct {
+    int min;
+    int max;
+} RandomIntParams;
+```
+
+Esta estrutura descreve o **contrato de configuração** do generator. Sendo assim, qualquer campo que utilize `random_int` deve oferecer parâmetros compatíveis com essa estrutura.
+
+Durante a fase de inicialização do módulo Source, o arquivo Genfile.toml é lido e interpretado pelo Orchestrator. Neste momento, os valores `min` e `max` são lidos do arquivo, convertidos para o tipo `int`, validados e armazenados em uma instância `RandomIntParams`. 
+
+Este processo ocorre uma única vez antes da geração dos registros.
+
+Após o parsing, o campo é representado internamente por uma estrutura `FieldSpec`, que conexta as informações comuns a qualquer campo (nome e generator) com os parâmetros específicos.  
+
+
+```c 
+FieldSpec {
+    name      = "age",
+    generator = "random_int",
+    params    = (RandomIntParams*) {...}
+}
+```
+
+O ponteiro `params` aponta para uma instância válida de `RandomIntParams`, já pronta para uso.
+
+
+⚠️ Importante: 
+- `params` não contém dados em formato textual.
+- Nenhum parsing ocorre durante a geração.
+- O generator não conhece TOML.
+
+Durante a geração de cada registro, o ochestrator chama o generator associado ao campo, passando o contexto global, especificação do campo (`FieldSpec`) e o registro parcial (`Record`).
+
+```c 
+FieldValue random_int_gen(
+    Context* context,
+    const FieldSpec* spec,
+    const Record* record
+) {
+    // Converte os parâmetros genéricos para o tipo esperado
+    RandomIntParams* p = (RandomIntParams*) spec->params;
+
+    // Usa os parâmetros diretamente, sem parsing adicional
+    int value = random_between(p->min, p->max);
+
+    // Monta e retorna o valor gerado
+    FieldValue fv;
+    fv.type = FIELD_INT;
+    fv.value.i = value;
+    return fv;
+}
+```
+
+Neste ponto o generator apenas executa a lógica de geração. Não há validações, leituras adicionais de configuração ou dependências de formato externo.
+
+⚠️ Importante:
+- Generator gera valores.
+- Orchestrator interpreta configuração.
+- Context guarda estado.
+- Generators não devem ler Genfile ou depender de informações diretas dele 
+- Generators não devem receber parametros em string com conversão posterior. Formato deve ser padronizado. 
+
+
 #### Context
 
 Objeto central de estado da geração.
@@ -275,7 +380,54 @@ Para cada campo:
 - Adicionar valor ao registro
 - Enviar registro ao buffer
 
+#### Geração de registros 
 
+A geração de registros segue uma lógica linear simples descrita a seguir: 
+
+``` text
+1. Aloca Record vazio
+2. Itera schema
+3. Para cada campo:
+   - resolve generator
+   - chama generator
+   - recebe FieldValue
+   - adiciona ao Record
+4. Envia Record para o buffer
+```
+
+Os tipos usados são descritos a seguir e no arquivo `main.h`.
+
+``` c 
+   
+typedef enum {
+    FIELD_INT,
+    FIELD_FLOAT,
+    FIELD_STRING,
+    FIELD_BOOL,
+    FIELD_NULL
+} FieldType;
+
+typedef struct {
+    FieldType type;
+    union {
+        int         i;
+        double      f;
+        char*       c;
+        int         b;    
+    } value;
+
+} FieldValue;
+
+typedef struct {
+    const char*     name;
+    FieldValue      value;
+} Field;
+
+typedef struct {
+    Field*          fields;
+    size_t          field_count;
+} Record;
+```
 
 
 
