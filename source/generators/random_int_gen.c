@@ -4,6 +4,7 @@
 
 int random_int_gen_init(Context* context, uint32_t seed) {
     random_service_init(context, seed);
+    return 1;   // TODO implementar verificação
 }
 
 /*
@@ -37,4 +38,5 @@ FieldValue random_int_gen_next(
 
 int random_int_gen_shutdown(Context* context) {
     random_service_shutdown(context);
+    return 1;   // TODO implementar verificação
 }

@@ -5,7 +5,7 @@ CFLAGS=-c -Wall -I/usr/include/postgresql
 # LDFLAGS: Flags para o linker (-L para o caminho da lib e -lpq para a libpq)
 LDFLAGS=-lpq
 
-SOURCE=main.c source/source.c source/context.c source/generators/random_int_gen.c source/services/random_service.c
+SOURCE=main.c source/source.c source/context.c source/generators/random_int_gen.c source/services/random_int_service.c
 
 OBJ=$(SOURCE:.c=.o)
 EXE=main
