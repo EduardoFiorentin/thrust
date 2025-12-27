@@ -1,4 +1,4 @@
-#include "random_service.h"
+#include "random_int_service.h"
 
 // Linear Congruential Generator (LCG)
 // Simples, rápido, previsível e independente de rand()

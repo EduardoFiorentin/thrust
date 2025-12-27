@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "source.h"
 #include "generators/random_int_gen.h"
+#include "services/random_int_service.h"
 #include "../main.h"
 
 // internal function - used to print signed messages
@@ -10,19 +11,18 @@ void source_print(const char* message) {
 
 // Configuração inicial 
 void init_source(Genfile* genfile, Context* context) {
-    source_print("Source module starting...");
-
-    // validate config file (MANDAR PARA OUTRO ARQUIVO/MODULO - source assume que é válido)
+    source_print("Module starting...");
+    
+    source_print("Starting context...");
     // Start context
     // init_context(...) // Function from context.c
 
     // Start submodules
     // begin all necessary submodules (generators)
-    // Call each submodule "load_context(context)" function
+    // Call each service "load_context(context)" function
     random_service_init(context, 159);    // TODO implementar seed vinda do genfile
     
-    // acho que cada submódulo poderia fica responsável por carregar suas próprias 
-    // dependências no contexto 
+
 
     
 

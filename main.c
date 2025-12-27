@@ -4,6 +4,12 @@
 int main() 
 {   
     Genfile genfile;
+    
+    // load genfile
+
+    // validate genfile
+    
+    
     RandomServiceContext random;
     Context context; 
     context.random = random;
