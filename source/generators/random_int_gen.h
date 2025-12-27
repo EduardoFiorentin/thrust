@@ -8,7 +8,8 @@ typedef struct {
     int max;
 } RandomIntParams;
 
-FieldValue random_int_gen(Context* context, const FieldSpec* spec, const Record* record);
-
+int             random_int_gen_init(Context* context, uint32_t seed);
+FieldValue      random_int_gen_next(Context* context, const FieldSpec* spec, const Record* record);
+int             random_int_gen_shutdown(Context* context);
 
 #endif

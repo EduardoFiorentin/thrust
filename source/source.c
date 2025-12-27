@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "source.h"
 #include "generators/random_int_gen.h"
-#include "services/random_int_service.h"
+// #include "services/random_int_service.h"
 #include "../main.h"
 
 // internal function - used to print signed messages
@@ -20,12 +20,8 @@ void init_source(Genfile* genfile, Context* context) {
     // Start submodules
     // begin all necessary submodules (generators)
     // Call each service "load_context(context)" function
-    random_service_init(context, 159);    // TODO implementar seed vinda do genfile
+    random_int_gen_init(context, 159);    // TODO implementar seed vinda do genfile
     
-
-
-    
-
 }
 
 // Função de execução 
@@ -48,7 +44,7 @@ void run_source(Genfile* genfile, Context* context) {
     fs.params = &rip;  // verificar se passar assim como endereço mantém os valores válidos
     
     for (int i = 0; i < 5; i++) {
-        FieldValue v = random_int_gen(context, &fs, &rec);
+        FieldValue v = random_int_gen_next(context, &fs, &rec);
         printf("Generated: %d\n", v.value.i);
     }
     
@@ -59,7 +55,7 @@ void run_source(Genfile* genfile, Context* context) {
 // finaliza submódulos, fecha conexões, etc.
 void shutdown_source(Context* context) {
     source_print("Cleaning context info.");
-    random_service_shutdown(context);
+    random_int_gen_shutdown(context);
     // Call each submodule "clean_context" function
 }
 

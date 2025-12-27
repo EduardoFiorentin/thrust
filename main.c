@@ -8,9 +8,11 @@ int main()
     // load genfile
 
     // validate genfile
-    
+
     
     RandomServiceContext random;
+    random.initialized = '0';
+    
     Context context; 
     context.random = random;
 

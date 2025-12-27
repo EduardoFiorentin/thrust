@@ -5,8 +5,13 @@
 #include "../main.h"
 
 // Context structures
+
+// initialized: 
+// '0' - another structure values not initialized yet
+// '1' - another structure values initialized
 typedef struct {
-    uint32_t state;         // random seed
+    char        initialized;
+    uint32_t    state;         // random seed
 } RandomServiceContext;
 
 typedef struct {
@@ -35,5 +40,6 @@ typedef FieldValue (*GeneratorFn)(
 
 
 int run_thread_source(Genfile* genfile, Context* context);
+void source_print(const char* message);
 
 #endif

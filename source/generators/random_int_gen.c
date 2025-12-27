@@ -1,21 +1,22 @@
 #include "../services/random_int_service.h"
 #include "random_int_gen.h"
 
+
+int random_int_gen_init(Context* context, uint32_t seed) {
+    random_service_init(context, seed);
+}
+
 /*
 Random int gerenator
 @param 
-    seed: A number that specifies which sequence of numbers the rand() function will follow.
+    seed A number that specifies which sequence of numbers the rand() function will follow.
 @param
-    limit: Upper random generation limit inclusive.
+    limit Upper random generation limit inclusive.
 
 @return 
     Pseudo random number between 0 and limit
 */
-// int generate_random_age(Context* ctx) {
-//     return random_service_next(ctx, 100);
-// }
-
-FieldValue random_int_gen(
+FieldValue random_int_gen_next(
     Context* context,
     const FieldSpec* spec,
     const Record* record
@@ -31,4 +32,9 @@ FieldValue random_int_gen(
     fv.type = FIELD_INT;
     fv.value.i = value;
     return fv;
+}
+
+
+int random_int_gen_shutdown(Context* context) {
+    random_service_shutdown(context);
 }
