@@ -11,7 +11,7 @@ int main()
 
     
     RandomServiceContext random;
-    random.initialized = '0';
+    random.initialized = CTX_NOT_INITIALIZED;
     
     Context context; 
     context.random = random;

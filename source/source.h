@@ -6,11 +6,13 @@
 
 // Context structures
 
-// initialized: 
-// '0' - another structure values not initialized yet
-// '1' - another structure values initialized
+typedef enum {
+    CTX_INITIALIZED,
+    CTX_NOT_INITIALIZED
+} Ctx_init;
+
 typedef struct {
-    char        initialized;
+    Ctx_init    initialized;   // says if the other context fields where initialized
     uint32_t    state;         // random seed
 } RandomServiceContext;
 
