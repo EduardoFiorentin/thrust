@@ -5,25 +5,29 @@
 #define A 1664525
 #define C 1013904223
 
-void random_service_init(Context* ctx, uint32_t seed) {
-    
-    if (ctx->random.initialized == '1') {
+int random_int_service_require(Context* context, uint32_t seed) {
+    if (context->random.initialized == '1') {
         source_print("The random number generation service has already been initialized. Nothing further needs to be done.");
-        return;
+        return 0;
     }
+    random_service_init(context, seed);
+    return 1;
+}
+
+void random_service_init(Context* context, uint32_t seed) {
     
     if (seed == 0)
         seed = 123456789; // seed default segura
 
-    ctx->random.state = seed;
-    ctx->random.initialized = '1';
+    context->random.state = seed;
+    context->random.initialized = '1';
 }
 
-uint32_t random_service_next(Context* ctx, uint32_t max) {
-    ctx->random.state = (A * ctx->random.state + C);
-    return ctx->random.state % (max + 1);
+uint32_t random_service_next(Context* context, uint32_t max) {
+    context->random.state = (A * context->random.state + C);
+    return context->random.state % (max + 1);
 }
 
-void random_service_shutdown(Context* ctx) {
+void random_service_shutdown(Context* context) {
     // Nothing to clean
 }

@@ -3,8 +3,7 @@
 
 
 int random_int_gen_init(Context* context, uint32_t seed) {
-    random_service_init(context, seed);
-    return 1;   // TODO implementar verificação
+    return random_int_service_require(context, seed);
 }
 
 /*
@@ -15,7 +14,7 @@ Random int gerenator
     limit Upper random generation limit inclusive.
 
 @return 
-    Pseudo random number between 0 and limit
+    FieldValue with field name and value
 */
 FieldValue random_int_gen_next(
     Context* context,
