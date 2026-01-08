@@ -3,13 +3,8 @@
 
 #include "../source.h"
 
-typedef struct {
-    int min;
-    int max;
-} RandomIntParams;
-
 int             random_int_gen_init(Context* context, uint32_t seed);
-FieldValue      random_int_gen_next(Context* context, const FieldSpec* spec, const Record* record);
+FieldValue      random_int_gen_next(Context* context, uint32_t table_pos, uint32_t column_pos, const Record* record);
 int             random_int_gen_shutdown(Context* context);
 
 #endif

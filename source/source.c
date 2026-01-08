@@ -31,22 +31,22 @@ void run_source(Genfile* genfile, Context* context) {
     // while not finished
         // generate new register 
         // send to shared buffer 
-    FieldSpec fs;
-    RandomIntParams rip; 
-    Record rec;
+    // FieldSpec fs;
+    // RandomIntParams rip; 
+    // Record rec;
     
 
-    rip.max = 1000;
-    rip.min = 30;
+    // rip.max = 1000;
+    // rip.min = 30;
 
-    fs.generator = "";
-    fs.name = "Campo teste";        // talvez nem precise ser guardado
-    fs.params = &rip;  // verificar se passar assim como endereço mantém os valores válidos
+    // fs.generator = "";
+    // fs.name = "Campo teste";        // talvez nem precise ser guardado
+    // fs.params = &rip;  // verificar se passar assim como endereço mantém os valores válidos
     
-    for (int i = 0; i < 5; i++) {
-        FieldValue v = random_int_gen_next(context, &fs, &rec);
-        printf("Generated: %d\n", v.value.i);
-    }
+    // for (int i = 0; i < 5; i++) {
+    //     FieldValue v = random_int_gen_next(context, &fs, &rec);
+    //     printf("Generated: %d\n", v.value.i);
+    // }
     
     source_print("Source module finished.");
 }
@@ -65,4 +65,5 @@ int run_thread_source(Genfile* genfile, Context* context) {
     init_source(genfile, context);
     run_source(genfile, context);
     shutdown_source(context);
+    return 1;
 }

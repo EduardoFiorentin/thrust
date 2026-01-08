@@ -16,16 +16,14 @@ Random int gerenator
 @return 
     FieldValue with field name and value
 */
-FieldValue random_int_gen_next(
-    Context* context,
-    const FieldSpec* spec,
-    const Record* record
-) {
+FieldValue random_int_gen_next(Context* context, uint32_t table_pos, uint32_t column_pos, const Record* record) {
     // Converte os parâmetros genéricos para o tipo esperado
-    RandomIntParams* p = (RandomIntParams*) spec->params;
+
+    RandomIntParams* params = (RandomIntParams*) context->tables[table_pos].columns[column_pos].desc->generator_params;
+
 
     // Usa os parâmetros diretamente, sem parsing adicional
-    int value = random_service_next(context, p->max);
+    int value = random_service_next(context, params->max);
 
     // Monta e retorna o valor gerado
     FieldValue fv;

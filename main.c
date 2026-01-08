@@ -10,7 +10,7 @@ int main()
     // validate genfile
 
     
-    RandomServiceContext random;
+    RandomIntServiceContext random;
     random.initialized = CTX_NOT_INITIALIZED;
     
     Context context; 
