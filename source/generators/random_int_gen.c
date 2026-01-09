@@ -16,10 +16,11 @@ Random int gerenator
 @return 
     FieldValue with field name and value
 */
-FieldValue random_int_gen_next(Context* context, uint32_t table_pos, uint32_t column_pos, const Record* record) {
+FieldValue random_int_gen_next(Context* context, uint32_t table_pos, uint32_t column_pos) {
     // Converte os parâmetros genéricos para o tipo esperado
 
-    RandomIntParams* params = (RandomIntParams*) context->tables[table_pos].columns[column_pos].desc->generator_params;
+    ColumnRuntimeState column = (ColumnRuntimeState) context->tables[table_pos].columns[column_pos];
+    RandomIntParams* params = (RandomIntParams*) column.descriptor->generator_params;
 
 
     // Usa os parâmetros diretamente, sem parsing adicional
@@ -27,6 +28,7 @@ FieldValue random_int_gen_next(Context* context, uint32_t table_pos, uint32_t co
 
     // Monta e retorna o valor gerado
     FieldValue fv;
+    
     fv.type = FIELD_INT;
     fv.value.i = value;
     return fv;

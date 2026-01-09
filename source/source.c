@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include "source.h"
 #include "generators/random_int_gen.h"
-// #include "services/random_int_service.h"
 #include "../main.h"
+#include "../utils/printer.h"
 
 // internal function - used to print signed messages
 void source_print(const char* message) {
@@ -28,6 +28,64 @@ void init_source(Genfile* genfile, Context* context) {
 void run_source(Genfile* genfile, Context* context) {
 
     source_print("Source module started and running.");
+    error_print_exit("source", "Memory allocation failed.");
+    
+    size_t num_tables = context->tables_count;
+    int idx_table = 0;
+    for (; idx_table < num_tables; idx_table++) {
+
+        // loop: numero de registros que devem ser gerados
+        size_t idx_record = 0;
+        for (; idx_record < context->tables[idx_table].num_records; idx_record++) {
+            // gera registro vazio
+            Record* new_record = (Record*) malloc(sizeof(Record));
+            if (!new_record)
+                error_print_exit("source", "Memory allocation failed - Record");
+
+            // para cada coluna 
+            size_t num_columns = context->tables[idx_table].columns_count;
+            new_record->field_count = num_columns;
+            // for (size_t idx_record = 0; idx_record < num_columns; idx_record++) {
+        
+            // }
+
+            size_t idx_column = 0;
+            for (; idx_column < num_columns; idx_column++) {
+                // aciona gerador correto 
+                // generator correto já é colocado no contexto em sua montagem lá no inicio.
+        
+                // TODO trocar a copia dos valores para acesso por endereço
+                Field* fd = (Field*) malloc(sizeof(Field) * num_columns);
+                if (!fd)
+                    error_print_exit("source", "Memory allocation failed - Field");
+                
+                new_record->fields[idx_record] = *fd;
+
+        
+                FieldValue* fv = (FieldValue*) malloc(sizeof(FieldType));
+                if (!fv) 
+                    error_print_exit("source", "Memory allocation failed - FieldValue.");
+                
+                *fv = (context->tables[idx_table].columns[idx_column].descriptor->generator(context, idx_table, idx_column));
+
+                fd->value = *fv;
+                fd->column_name = context->tables[idx_table].columns[idx_column].column_name;
+                fd->table_name = context->tables[idx_table].table_name;
+                
+                
+                // imprime (futura adição ao buffer)            
+            
+            
+            }
+
+        }    
+    }
+    
+    
+    
+    
+    
+    
     // while not finished
         // generate new register 
         // send to shared buffer 

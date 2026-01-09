@@ -29,7 +29,8 @@ typedef struct {
 } FieldValue;
 
 typedef struct {
-    const char*     name;
+    const char*     table_name;
+    const char*     column_name;
     FieldValue      value;
 } Field;
 
