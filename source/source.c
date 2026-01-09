@@ -28,7 +28,7 @@ void init_source(Genfile* genfile, Context* context) {
 void run_source(Genfile* genfile, Context* context) {
 
     source_print("Source module started and running.");
-    error_print_exit("source", "Memory allocation failed.");
+    // error_print_exit("source", "Memory allocation failed.");
     
     size_t num_tables = context->tables_count;
     int idx_table = 0;
@@ -45,9 +45,11 @@ void run_source(Genfile* genfile, Context* context) {
             // para cada coluna 
             size_t num_columns = context->tables[idx_table].columns_count;
             new_record->field_count = num_columns;
-            // for (size_t idx_record = 0; idx_record < num_columns; idx_record++) {
-        
-            // }
+            
+            new_record->fields = (Field*) malloc(sizeof(Field) * num_columns);
+            if (!new_record->fields) {
+                error_print_exit("source", "Memory allocation failed - fields");
+            }
 
             size_t idx_column = 0;
             for (; idx_column < num_columns; idx_column++) {
@@ -55,28 +57,46 @@ void run_source(Genfile* genfile, Context* context) {
                 // generator correto já é colocado no contexto em sua montagem lá no inicio.
         
                 // TODO trocar a copia dos valores para acesso por endereço
-                Field* fd = (Field*) malloc(sizeof(Field) * num_columns);
-                if (!fd)
-                    error_print_exit("source", "Memory allocation failed - Field");
+                // Field* fd = (Field*) malloc(sizeof(Field) * num_columns);
+                Field fd;
+                // if (!fd) {
+                //     error_print_exit("source", "Memory allocation failed - Field");
+                // }
                 
-                new_record->fields[idx_record] = *fd;
+                    
+                    
+                FieldValue fv;
+                // if (!fv) {
+                //     error_print_exit("source", "Memory allocation failed - FieldValue.");
+                // }
+                
+                // gera valor
+                fv = context->tables[idx_table].columns[idx_column].descriptor->generator(context, idx_table, idx_column);
+                
+                // popula Field global 
+                fd.value = fv;
+                fd.column_name = context->tables[idx_table].columns[idx_column].column_name;
+                fd.table_name = context->tables[idx_table].table_name;
+                
+                // adiciona o field ao array de Fields (Registro)
+                new_record->fields[idx_column] = fd;
 
-        
-                FieldValue* fv = (FieldValue*) malloc(sizeof(FieldType));
-                if (!fv) 
-                    error_print_exit("source", "Memory allocation failed - FieldValue.");
-                
-                *fv = (context->tables[idx_table].columns[idx_column].descriptor->generator(context, idx_table, idx_column));
-
-                fd->value = *fv;
-                fd->column_name = context->tables[idx_table].columns[idx_column].column_name;
-                fd->table_name = context->tables[idx_table].table_name;
-                
-                
-                // imprime (futura adição ao buffer)            
-            
-            
             }
+
+            // imprime (futura adição ao buffer)            
+            printf("%ld: ", idx_record);
+            for (int i = 0; i < new_record->field_count; i++) {
+                printf("%d\t |", new_record->fields[i].value.value.i);
+            }
+            printf("\n");
+
+            // libera memória
+            // for (int i = 0; i < new_record->field_count; i++) {
+            //     free(&new_record->fields[i].value);
+            //     free(&new_record->fields[i]);
+            // }
+            free(new_record->fields);
+            free(new_record);
 
         }    
     }

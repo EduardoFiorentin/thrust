@@ -17,30 +17,53 @@ int main()
     // inicialização do modelo a ser gerado
     
     // parametros do generator
-    RandomIntParams randomIntParams;
-    randomIntParams.max = 200;
-    randomIntParams.min = 100;
+    RandomIntParams randomIntParams1;
+    randomIntParams1.max = 200;
+    randomIntParams1.min = 100;
     
-    ColumnDescriptor column_desc;
-    column_desc.generator = random_int_gen_next;
-    column_desc.generator_params = &randomIntParams;
+    RandomIntParams randomIntParams2;
+    randomIntParams2.max = 9999;
+    randomIntParams2.min = 100;
+    
+    ColumnDescriptor column_desc1;
+    column_desc1.generator = random_int_gen_next;
+    column_desc1.generator_params = &randomIntParams1;
+
+    ColumnDescriptor column_desc2;
+    column_desc2.generator = random_int_gen_next;
+    column_desc2.generator_params = &randomIntParams2;
 
 
-    ColumnRuntimeState column;
-    column.column_name = "col";
-    column.descriptor = &column_desc;
+    ColumnRuntimeState columnTb1;
+    columnTb1.column_name = "col tb 1";
+    columnTb1.descriptor = &column_desc1;
 
+    ColumnRuntimeState columnTb2;
+    columnTb2.column_name = "col tb 2";
+    columnTb2.descriptor = &column_desc2;
+
+    ColumnRuntimeState columns1[5] = {columnTb1, columnTb1, columnTb1, columnTb1, columnTb1};
+    ColumnRuntimeState columns2[10] = {columnTb2, columnTb2, columnTb2, columnTb2, columnTb2, columnTb2, columnTb2, columnTb2, columnTb2, columnTb2};
+
+    TableDescriptor table1;
+    table1.table_name = "Example 1";
+    table1.columns_count = sizeof(columns1)/sizeof(columnTb1);
+    table1.columns = columns1;
+    table1.num_records = 10; 
     
-    TableDescriptor table;
-    table.table_name = "Example";
-    table.columns_count = 1;
-    table.columns = &column;
-    
+    TableDescriptor table2;
+    table2.table_name = "Example 2";
+    table2.columns_count = sizeof(columns2)/sizeof(columnTb2);
+    table2.columns = columns2;
+    table2.num_records = 10; 
+
+    TableDescriptor tables[] = {table1, table2};
+
     // contexto
     Context context; 
     context.random = random;
-    context.tables = &table;
-    context.tables_count = 1;
+    context.tables = tables;
+    context.tables_count = 2;
 
 
     run_thread_source(&genfile, &context);
