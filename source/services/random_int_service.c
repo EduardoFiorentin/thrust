@@ -1,4 +1,5 @@
 #include "random_int_service.h"
+#include <stdio.h>
 
 // Linear Congruential Generator (LCG)
 // Simples, rápido, previsível e independente de rand()

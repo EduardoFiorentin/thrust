@@ -28,8 +28,8 @@ void init_source(Genfile* genfile, Context* context) {
 void run_source(Genfile* genfile, Context* context) {
 
     source_print("Source module started and running.");
-    // error_print_exit("source", "Memory allocation failed.");
     
+    // loop: for each table who needs registre generation
     size_t num_tables = context->tables_count;
     int idx_table = 0;
     for (; idx_table < num_tables; idx_table++) {
@@ -37,14 +37,14 @@ void run_source(Genfile* genfile, Context* context) {
         // loop: numero de registros que devem ser gerados
         size_t idx_record = 0;
         for (; idx_record < context->tables[idx_table].num_records; idx_record++) {
-            // gera registro vazio
+            
             Record* new_record = (Record*) malloc(sizeof(Record));
             if (!new_record)
                 error_print_exit("source", "Memory allocation failed - Record");
 
-            // para cada coluna 
+            // for each column in the table, call generator and populate fields 
             size_t num_columns = context->tables[idx_table].columns_count;
-            new_record->field_count = num_columns;
+            new_record->field_count = num_columns;  // TODO trocar nome field_count para num_columns
             
             new_record->fields = (Field*) malloc(sizeof(Field) * num_columns);
             if (!new_record->fields) {
@@ -53,24 +53,12 @@ void run_source(Genfile* genfile, Context* context) {
 
             size_t idx_column = 0;
             for (; idx_column < num_columns; idx_column++) {
-                // aciona gerador correto 
-                // generator correto já é colocado no contexto em sua montagem lá no inicio.
+                // activate correct generator
+                // correct generator is already in context, and just need to be called.
         
-                // TODO trocar a copia dos valores para acesso por endereço
-                // Field* fd = (Field*) malloc(sizeof(Field) * num_columns);
                 Field fd;
-                // if (!fd) {
-                //     error_print_exit("source", "Memory allocation failed - Field");
-                // }
-                
-                    
-                    
                 FieldValue fv;
-                // if (!fv) {
-                //     error_print_exit("source", "Memory allocation failed - FieldValue.");
-                // }
                 
-                // gera valor
                 fv = context->tables[idx_table].columns[idx_column].descriptor->generator(context, idx_table, idx_column);
                 
                 // popula Field global 
@@ -90,41 +78,11 @@ void run_source(Genfile* genfile, Context* context) {
             }
             printf("\n");
 
-            // libera memória
-            // for (int i = 0; i < new_record->field_count; i++) {
-            //     free(&new_record->fields[i].value);
-            //     free(&new_record->fields[i]);
-            // }
             free(new_record->fields);
             free(new_record);
 
         }    
     }
-    
-    
-    
-    
-    
-    
-    // while not finished
-        // generate new register 
-        // send to shared buffer 
-    // FieldSpec fs;
-    // RandomIntParams rip; 
-    // Record rec;
-    
-
-    // rip.max = 1000;
-    // rip.min = 30;
-
-    // fs.generator = "";
-    // fs.name = "Campo teste";        // talvez nem precise ser guardado
-    // fs.params = &rip;  // verificar se passar assim como endereço mantém os valores válidos
-    
-    // for (int i = 0; i < 5; i++) {
-    //     FieldValue v = random_int_gen_next(context, &fs, &rec);
-    //     printf("Generated: %d\n", v.value.i);
-    // }
     
     source_print("Source module finished.");
 }

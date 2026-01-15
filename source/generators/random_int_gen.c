@@ -1,6 +1,8 @@
 #include "../services/random_int_service.h"
 #include "random_int_gen.h"
-
+#include "../../main.h"
+#include "../../utils/printer.h"
+#include <stdio.h>
 
 int random_int_gen_init(Context* context, uint32_t seed) {
     return random_int_service_require(context, seed);
@@ -20,12 +22,15 @@ FieldValue random_int_gen_next(Context* context, uint32_t table_pos, uint32_t co
     // Converte os parâmetros genéricos para o tipo esperado
 
     ColumnRuntimeState column = (ColumnRuntimeState) context->tables[table_pos].columns[column_pos];
-    RandomIntParams* params = (RandomIntParams*) column.descriptor->generator_params;
+    ParamList* params = column.descriptor->generator_params;
 
+    Param* param_max = search_param_by_key(params, "max");
+    if (!param_max) {
+        error_print_exit("SOURCE", "Param 'max' not found in random int generator.");
+    }
 
-    // Usa os parâmetros diretamente, sem parsing adicional
-    int value = random_service_next(context, params->max);
-
+    int value = random_service_next(context, param_max->value.i);
+    // printf("%d\n", value);
     // Monta e retorna o valor gerado
     FieldValue fv;
     

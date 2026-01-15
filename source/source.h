@@ -37,8 +37,9 @@ typedef struct {
 
 // Column descriptor
 typedef struct {
-    GeneratorFn generator;
-    void*       generator_params;
+    GeneratorFn     generator;
+    ParamList*      generator_params;
+    // TODO Implementar um local_generator_context - responsável por guardar um contexto específico do gerador
 } ColumnDescriptor;
 
 

@@ -1,0 +1,48 @@
+[config]
+    # configurações gerais 
+    config_str = "jsFKiesadewfEFOWEolod"
+
+# lista de tabelas a serem geradas
+[tables]
+    list = ["usuarios", "itens", "permissoes"]
+
+# definições de cada tabela
+[usuarios]
+    columns = ["id", "nome", "telefone"]
+    num_records = 50
+
+    [usuarios.id]
+        generator_type = "random_int"
+        min = 0
+        max = 100
+
+    [usuarios.nome]
+        generator_type = "name_generator"
+        max_len = 8
+
+    [usuarios.telefone]
+        generator_type = "random_int"
+        min = 0
+        max = 100
+
+
+[itens]
+    columns = ["id"]
+    num_records = 20
+
+    [itens.id]
+        generator_type = "serial_gen"
+        starting = 1
+
+[permissoes]
+    columns = ["id", "name"]
+    num_records = 10
+
+    [permissoes.id]
+        generator_type = "serial_gen"
+        starting = 1
+
+    [permissoes.name]
+        generator_type = "name_gen"
+        min_len = 2
+        max_len = 4
