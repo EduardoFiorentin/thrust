@@ -1,0 +1,67 @@
+{
+    "config": {
+        
+        "target": "sql_file"
+
+    },
+    "tables": {
+        "usuarios": {
+            "num_records": 30,
+            "columns": {
+                "id": {
+                    "generator_type": "random_int",
+                    "min": 0,
+                    "max": 100
+                },
+                "nome": {
+                    "generator_type": "random_int",
+                    "min": 0,
+                    "max": 100
+                },
+                "telefone": {
+                    "generator_type": "phone"
+                }
+            }
+        },
+        
+        "items": {
+            "num_records": 20,
+            "columns": {
+                "id": {
+                    "generator_type": "random_int",
+                    "min": 0,
+                    "max": 100
+                },
+                "nome": {
+                    "generator_type": "random_int",
+                    "min": 0,
+                    "max": 100
+                },
+                "telefone": {
+                    "generator_type": "phone",
+                    "country": "pt-br"
+                }
+            }
+        },
+        "permissoes": {
+            "num_records": 30,
+            "columns": {
+                "id": {
+                    "generator_type": "random_int",
+                    "min": 0,
+                    "max": 100
+                },
+                "nome": {
+                    "generator_type": "random_int",
+                    "min": 0,
+                    "max": 100
+                },
+                "created_at": {
+                    "generator_type": "date",
+                    "min": "01/01/1970",
+                    "max": "31/12/2025"
+                }
+            }
+        }
+    }
+}
