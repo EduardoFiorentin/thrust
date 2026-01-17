@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS=-c -Wall -I/usr/include/postgresql
 
 # LDFLAGS: Flags para o linker (-L para o caminho da lib e -lpq para a libpq)
-LDFLAGS=-lpq
+LDFLAGS=-lpq -ljson-c
 
 SOURCE=main.c \
 source/source.c \
