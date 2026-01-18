@@ -3,11 +3,6 @@
 
 #include <stdlib.h>
 
-// Genfile structure
-typedef struct {
-    // config do genfile futuramente
-} Genfile;
-
  
 typedef enum {
     FIELD_INT,
@@ -50,7 +45,7 @@ typedef enum {
     PARAM_NULL
 } ParamType;
 
-typedef struct {
+typedef struct param {
     char *key;
     ParamType type;
     union {
@@ -61,43 +56,43 @@ typedef struct {
     } value;
 } Param;
 
-typedef struct {
+typedef struct parmList {
     Param *params;
     size_t param_count;
 } ParamList;
 
 
 /* Structures of generator description system */
-typedef struct {
+typedef struct generatorDesc {
     char *type;              // "random_int", "serial_gen", etc
     Param *params;
     size_t param_count;
 } GeneratorDesc;
 
-typedef struct {
+typedef struct columnDesc {
     char *name;
     GeneratorDesc generator;
 } ColumnDesc;
 
-typedef struct {
+typedef struct tableDesc {
     char *name;
     ColumnDesc *columns;
     size_t column_count;
 } TableDesc;
 
 // structure for global / general configurations
-typedef struct {
-    char *config_str;
+typedef struct globalConfigs {
+    char *target_key;
     // add another global configurations here
 } GlobalConfigs;
 
 // General structure for generation description
 // Used to describe all generation parameters from specific parser to internal system
-typedef struct {
+typedef struct genfile {
     GlobalConfigs config;
     TableDesc *tables;
     size_t table_count;
-} GenDescription;
+} Genfile;
 
 Param* search_param_by_key(ParamList* params, const char* key);
 
