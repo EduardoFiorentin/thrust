@@ -1,30 +1,20 @@
-/* 
-
-como os formatos de descrição podem ser variados - 
-deixar o módulo cuidar da forma como será implementado internamente 
-(quais os métodos, forma de chamada, etc)
-
-O QUE SERÁ PADRONIZADO: 
-Assinatura do método de chamada
-
-
-
-// leitura do arquivo 
-// parsing para GRN
-*/
 #include <json-c/json.h>
 #include "../main.h"
 #include <stdio.h>
 #include <stdlib.h>
-// #include "../utils/printer.h"
 
 #define MODULE_NAME "GENFILE PARSER"
+#define JSON_KEY_GLOBAL_CONFIGS                 "config"
+#define JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME     "target"
+#define JSON_KEY_TABLES                         "tables"
+#define JSON_KEY_NUMBER_RECORDS                 "num_records"
+#define JSON_KEY_TABLE_COLUMNS                  "columns"
 
 typedef struct tableListParamGRN TableListParamGRN;
 typedef struct columnListParamGRN ColumnListParamGRN;
 typedef struct grn GRN;
 
-struct TableListParamGRN {
+struct tableListParamGRN {
     const char*             key;
     size_t                  num_records;
     ColumnListParamGRN*     columns;
@@ -38,14 +28,38 @@ struct columnListParamGRN {
 };
 
 struct grn {
-    ParamList*              configs; 
-    TableListParamGRN*      params;
+    Param*                  configs;
+    size_t                  num_configs; 
+    TableListParamGRN*      tables;
+    size_t                  num_tables;
 };
+
+/*
+typedef enum {
+    PARAM_INT,
+    PARAM_STRING,
+    PARAM_FLOAT,
+    PARAM_BOOL,
+    PARAM_NULL
+} ParamType;
+
+typedef struct param {
+    char *key;
+    ParamType type;
+    union {
+        int i;
+        float f;
+        char *s;
+        int b;
+    } value;
+} Param;
+*/
+
 
 GRN genfile_parser_execute(const char* file_name);
 struct json_object* genfile_read_json(const char* file_name);
 
-// TODO Remove -------------------------------------------
+// TODO Remove aux methods -------------------------------------------
 
 void aux_print_obj(struct json_object* obj) {
     printf("%s\n", json_object_to_json_string(obj));
@@ -67,17 +81,106 @@ void error_print_exit(const char* module, const char* message) {
 // TODO pensar em um nome melhor
 GRN genfile_parser_execute(const char* file_name) {
     
+    printf("________________| Genfile Description - JSON parser |________________\n");
+    printf("_____________________________________________________________________\n");
+    printf("\n Global configs: \n");
     GRN structure;
+    char buffer_string[100];
     
-    struct json_object *genfile_root, *configs_root, *tables_root;
+    struct json_object* root = json_object_from_file(file_name);
 
+    // acess main doc properties
+    struct json_object *obj_config, *obj_tables;
 
-    genfile_root = genfile_read_json(file_name);
-    if (genfile_root == NULL) {
-        error_print_exit(MODULE_NAME, "Genfile read failed!");
+    // 
+    if (!json_object_object_get_ex(root, JSON_KEY_GLOBAL_CONFIGS, &obj_config)) {
+        sprintf(buffer_string, "'%s' property is required in the genfile.", JSON_KEY_GLOBAL_CONFIGS);
+        error_print_exit(MODULE_NAME, buffer_string);
     }
 
-    aux_print_obj(genfile_root);
+    if (!json_object_object_get_ex(root, JSON_KEY_TABLES, &obj_tables)) {
+        sprintf(buffer_string, "'%s' property is required in the genfile.", JSON_KEY_TABLES);
+        error_print_exit(MODULE_NAME, buffer_string);
+    }
+
+    // reading global properties
+    const char* target = json_object_get_string(json_object_object_get(obj_config, JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME));
+    if (target == NULL) {
+        sprintf(buffer_string, "'%s.%s' property is required in the genfile.", JSON_KEY_GLOBAL_CONFIGS, JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME);
+        error_print_exit(MODULE_NAME, buffer_string);
+    }
+    printf("Target name: %s\n", target);
+
+
+    int num_tables = json_object_object_length(obj_tables);
+    int num_global_configs = json_object_object_length(obj_config);
+
+    // populating main GRN structure - memory allocation
+    structure.tables = (TableListParamGRN*) malloc(sizeof(TableListParamGRN) * num_tables);
+    structure.num_tables = num_tables;
+    structure.configs = (Param*) malloc(sizeof(Param) * num_global_configs);
+    structure.num_configs = num_global_configs;
+    
+    printf("\nTables description: \n");
+
+    printf("Numero de tabelas: %d\nNumero de configurações globais: %d\n", num_tables, num_global_configs);
+    
+    int idx_table = 0;
+    json_object_object_foreach(obj_tables, key_tables, value_tables) {
+        printf("Tabela: %s\n", key_tables);
+        
+        // getting tables list root
+        struct json_object *tables_root;
+        if (!json_object_object_get_ex(obj_tables, key_tables, &tables_root)) {
+            sprintf(buffer_string, "'%s' table could not be found.", key_tables);
+            error_print_exit(MODULE_NAME, buffer_string);
+        }
+
+        int num_regs_tobe_gen;
+        struct json_object *columns;
+
+        // getting number of registers to be generated
+        num_regs_tobe_gen = json_object_get_int(json_object_object_get(tables_root, JSON_KEY_NUMBER_RECORDS));
+        structure.tables[idx_table].num_records = num_regs_tobe_gen;
+        printf("\tNum registros: %d\n", num_regs_tobe_gen);
+
+        // getting collumns list of the table 
+        if (!json_object_object_get_ex(tables_root, JSON_KEY_TABLE_COLUMNS, &columns)) {
+            sprintf(buffer_string, "'%s' property could not be found in '%s' table description.", JSON_KEY_TABLE_COLUMNS, key_tables);
+            error_print_exit(MODULE_NAME, buffer_string);
+        }
+
+        json_object_object_foreach(columns, key_column, value_column) {
+            printf("\tColuna: %s\n", key_column);
+
+            
+            struct json_object *column_details;
+            if (!json_object_object_get_ex(columns, key_column, &column_details)) {
+                printf("Detail não encontrado\n");
+            }
+
+            json_object_object_foreach(column_details, key_col_param, value_col_param) {
+                printf("\t\t%s: ",key_col_param);
+                if (json_object_get_type(value_col_param) == json_type_int) {
+                    printf("%d\n", json_object_get_int(value_col_param));
+                }
+                else if (json_object_get_type(value_col_param) == json_type_string) {
+                    printf("%s\n", json_object_get_string(value_col_param));
+                }
+                else printf("tipo não descrito\n");
+            }
+
+            
+            json_object_put(column_details);
+        }
+        json_object_put(tables_root);
+        json_object_put(columns);
+    }
+
+    json_object_put(obj_config);
+    json_object_put(obj_tables);
+    json_object_put(root);
+
 }
 
 struct json_object* genfile_read_json(const char* file_name) {
@@ -87,7 +190,7 @@ struct json_object* genfile_read_json(const char* file_name) {
 
 int main() {
 
-    GRN genfile_grn = genfile_parser_execute("genile.json");
+    GRN genfile_grn = genfile_parser_execute("genfile.json");
 
     return 0;
 }

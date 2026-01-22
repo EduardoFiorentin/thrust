@@ -1,6 +1,7 @@
 #include <json-c/json.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "../main.h"
 
 
 #define JSON_FILE                               "teste.json"
@@ -28,9 +29,11 @@ int main() {
     }
 
     const char* target = json_object_get_string(json_object_object_get(obj_config, JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME));
-    printf("%s\n", target);
+    printf("Target name: %s\n", target);
 
 
+    int num_columns = json_object_object_length(obj_tables);
+    printf("Numero de tabelas: %d\n", num_columns);
     json_object_object_foreach(obj_tables, key, value_tables) {
         printf("Tabela: %s\n", key);
         
