@@ -10,18 +10,18 @@
 #define JSON_KEY_NUMBER_RECORDS                 "num_records"
 #define JSON_KEY_TABLE_COLUMNS                  "columns"
 
-typedef struct tableListParamGRN TableListParamGRN;
-typedef struct columnListParamGRN ColumnListParamGRN;
+typedef struct tableGRN TableGRN;
+typedef struct columnGRN ColumnGRN;
 typedef struct grn GRN;
 
-struct tableListParamGRN {
+struct tableGRN {
     const char*             key;
     size_t                  num_records;
-    ColumnListParamGRN*     columns;
+    ColumnGRN*              columns;
     size_t                  num_columns;   
 };
 
-struct columnListParamGRN {
+struct columnGRN {
     const char*     key;
     Param*          params;
     size_t          num_params;
@@ -30,7 +30,7 @@ struct columnListParamGRN {
 struct grn {
     Param*                  configs;
     size_t                  num_configs; 
-    TableListParamGRN*      tables;
+    TableGRN*               tables;
     size_t                  num_tables;
 };
 
@@ -116,14 +116,14 @@ GRN genfile_parser_execute(const char* file_name) {
     int num_global_configs = json_object_object_length(obj_config);
 
     // populating main GRN structure - memory allocation
-    structure.tables = (TableListParamGRN*) malloc(sizeof(TableListParamGRN) * num_tables);
+    structure.tables = (TableGRN*) malloc(sizeof(TableGRN) * num_tables);
     structure.num_tables = num_tables;
     structure.configs = (Param*) malloc(sizeof(Param) * num_global_configs);
     structure.num_configs = num_global_configs;
     
     printf("\nTables description: \n");
 
-    printf("Numero de tabelas: %d\nNumero de configurações globais: %d\n", num_tables, num_global_configs);
+    printf("Numero de tabelas: %ld\nNumero de configurações globais: %ld\n", structure.num_tables, structure.num_configs);
     
     int idx_table = 0;
     json_object_object_foreach(obj_tables, key_tables, value_tables) {
@@ -175,6 +175,7 @@ GRN genfile_parser_execute(const char* file_name) {
         }
         json_object_put(tables_root);
         json_object_put(columns);
+        idx_table++;
     }
 
     json_object_put(obj_config);
