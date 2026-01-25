@@ -56,7 +56,7 @@ typedef struct param {
 */
 
 
-GRN genfile_parser_execute(const char* file_name);
+GRN* genfile_parser_execute(const char* file_name);
 struct json_object* genfile_read_json(const char* file_name);
 void read_columns_from_columns_root(GRN* structure, json_object *columns_root);
 void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* buffer_string);
@@ -83,12 +83,13 @@ void error_print_exit(const char* module, const char* message) {
 
 // C FILE 
 // TODO pensar em um nome melhor
-GRN genfile_parser_execute(const char* file_name) {
+GRN* genfile_parser_execute(const char* file_name) {
     
     printf("________________| Genfile Description - JSON parser |________________\n");
     printf("_____________________________________________________________________\n");
     printf("\n Global configs: \n");
-    GRN structure;
+    GRN* structure = malloc(sizeof(GRN));
+    
     char buffer_string[100];
     
     struct json_object* root = json_object_from_file(file_name);
@@ -107,16 +108,18 @@ GRN genfile_parser_execute(const char* file_name) {
         error_print_exit(MODULE_NAME, buffer_string);
     }
 
-    read_global_properties_from_json(&structure, obj_config, buffer_string);
+    read_global_properties_from_json(structure, obj_config, buffer_string);
     
     printf("\nTables description: \n");
-    printf("Numero de tabelas: %ld\nNumero de configurações globais: %ld\n", structure.num_tables, structure.num_configs);
+    printf("Numero de tabelas: %ld\nNumero de configurações globais: %ld\n", structure->num_tables, structure->num_configs);
     
-    read_tables_from_table_root(&structure, obj_tables, buffer_string);
+    read_tables_from_table_root(structure, obj_tables, buffer_string);
     
     json_object_put(obj_config);
     json_object_put(obj_tables);
-    json_object_put(root);
+    json_object_put(root); 
+
+    return structure;
 
 }
 
@@ -219,7 +222,12 @@ struct json_object* genfile_read_json(const char* file_name) {
 
 int main() {
 
-    GRN genfile_grn = genfile_parser_execute("genfile.json");
+    GRN* genfile_grn = genfile_parser_execute("genfile.json");
+
+    printf("\n\nTeste de valores gerados |-----------------------------------\n");
+    for (int i = 0; i < genfile_grn->num_tables; i++) {
+        printf("%ld\n", genfile_grn->tables[i].num_records);
+    }
 
     return 0;
 }
