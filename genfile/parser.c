@@ -61,6 +61,7 @@ struct json_object* genfile_read_json(const char* file_name);
 void read_columns_from_columns_root(GRN* structure, json_object *columns_root);
 void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* buffer_string);
 void read_values_from_column_root(GRN* structure, json_object *column_details_root);
+void read_global_properties_from_json(GRN* structure, struct json_object* obj_config, char* buffer_string);
 
 // TODO Remove aux methods -------------------------------------------
 
@@ -95,7 +96,7 @@ GRN genfile_parser_execute(const char* file_name) {
     // acess main doc properties
     struct json_object *obj_config, *obj_tables;
 
-    // 
+    // load root pointers
     if (!json_object_object_get_ex(root, JSON_KEY_GLOBAL_CONFIGS, &obj_config)) {
         sprintf(buffer_string, "'%s' property is required in the genfile.", JSON_KEY_GLOBAL_CONFIGS);
         error_print_exit(MODULE_NAME, buffer_string);
@@ -106,37 +107,45 @@ GRN genfile_parser_execute(const char* file_name) {
         error_print_exit(MODULE_NAME, buffer_string);
     }
 
-    // reading global properties
-    const char* target = json_object_get_string(json_object_object_get(obj_config, JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME));
-    if (target == NULL) {
-        sprintf(buffer_string, "'%s.%s' property is required in the genfile.", JSON_KEY_GLOBAL_CONFIGS, JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME);
-        error_print_exit(MODULE_NAME, buffer_string);
-    }
-    printf("Target name: %s\n", target);
-
-
-    int num_tables = json_object_object_length(obj_tables);
-    int num_global_configs = json_object_object_length(obj_config);
-
-    // populating main GRN structure - memory allocation
-    structure.tables = (TableGRN*) malloc(sizeof(TableGRN) * num_tables);
-    structure.num_tables = num_tables;
-    structure.configs = (Param*) malloc(sizeof(Param) * num_global_configs);
-    structure.num_configs = num_global_configs;
+    read_global_properties_from_json(&structure, obj_config, buffer_string);
     
     printf("\nTables description: \n");
-
     printf("Numero de tabelas: %ld\nNumero de configurações globais: %ld\n", structure.num_tables, structure.num_configs);
     
     read_tables_from_table_root(&structure, obj_tables, buffer_string);
-
+    
     json_object_put(obj_config);
     json_object_put(obj_tables);
     json_object_put(root);
 
 }
 
+
+void read_global_properties_from_json(GRN* structure, struct json_object* obj_config, char* buffer_string) {
+    
+    int num_global_configs = json_object_object_length(obj_config);
+
+    structure->configs = (Param*) malloc(sizeof(Param) * num_global_configs);
+    structure->num_configs = num_global_configs;
+    
+    // reading config.target
+    const char* target = json_object_get_string(json_object_object_get(obj_config, JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME));
+    if (target == NULL) {
+        sprintf(buffer_string, "'%s.%s' property is required in the genfile.", JSON_KEY_GLOBAL_CONFIGS, JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME);
+        error_print_exit(MODULE_NAME, buffer_string);
+    }
+    printf("Target name: %s\n", target);
+}
+
+
 void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* buffer_string) {
+    // read essencials from tables
+    int num_tables = json_object_object_length(obj_tables);
+    structure->num_tables = num_tables;
+    
+    // aloc memory to tables
+    structure->tables = (TableGRN*) malloc(sizeof(TableGRN) * num_tables);
+
     int idx_table = 0;
     json_object_object_foreach(obj_tables, key_tables, value_tables) {
         printf("Tabela: %s\n", key_tables);
