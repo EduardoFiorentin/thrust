@@ -58,6 +58,9 @@ typedef struct param {
 
 GRN genfile_parser_execute(const char* file_name);
 struct json_object* genfile_read_json(const char* file_name);
+void read_columns_from_columns_root(GRN* structure, json_object *columns_root);
+void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* buffer_string);
+void read_values_from_column_root(GRN* structure, json_object *column_details_root);
 
 // TODO Remove aux methods -------------------------------------------
 
@@ -125,6 +128,15 @@ GRN genfile_parser_execute(const char* file_name) {
 
     printf("Numero de tabelas: %ld\nNumero de configurações globais: %ld\n", structure.num_tables, structure.num_configs);
     
+    read_tables_from_table_root(&structure, obj_tables, buffer_string);
+
+    json_object_put(obj_config);
+    json_object_put(obj_tables);
+    json_object_put(root);
+
+}
+
+void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* buffer_string) {
     int idx_table = 0;
     json_object_object_foreach(obj_tables, key_tables, value_tables) {
         printf("Tabela: %s\n", key_tables);
@@ -137,51 +149,58 @@ GRN genfile_parser_execute(const char* file_name) {
         }
 
         int num_regs_tobe_gen;
-        struct json_object *columns;
+        struct json_object *columns_root;
 
         // getting number of registers to be generated
         num_regs_tobe_gen = json_object_get_int(json_object_object_get(tables_root, JSON_KEY_NUMBER_RECORDS));
-        structure.tables[idx_table].num_records = num_regs_tobe_gen;
+        structure->tables[idx_table].num_records = num_regs_tobe_gen;
         printf("\tNum registros: %d\n", num_regs_tobe_gen);
 
         // getting collumns list of the table 
-        if (!json_object_object_get_ex(tables_root, JSON_KEY_TABLE_COLUMNS, &columns)) {
+        if (!json_object_object_get_ex(tables_root, JSON_KEY_TABLE_COLUMNS, &columns_root)) {
             sprintf(buffer_string, "'%s' property could not be found in '%s' table description.", JSON_KEY_TABLE_COLUMNS, key_tables);
             error_print_exit(MODULE_NAME, buffer_string);
         }
 
-        json_object_object_foreach(columns, key_column, value_column) {
-            printf("\tColuna: %s\n", key_column);
+        read_columns_from_columns_root(structure, columns_root);
 
-            
-            struct json_object *column_details;
-            if (!json_object_object_get_ex(columns, key_column, &column_details)) {
-                printf("Detail não encontrado\n");
-            }
-
-            json_object_object_foreach(column_details, key_col_param, value_col_param) {
-                printf("\t\t%s: ",key_col_param);
-                if (json_object_get_type(value_col_param) == json_type_int) {
-                    printf("%d\n", json_object_get_int(value_col_param));
-                }
-                else if (json_object_get_type(value_col_param) == json_type_string) {
-                    printf("%s\n", json_object_get_string(value_col_param));
-                }
-                else printf("tipo não descrito\n");
-            }
-
-            
-            json_object_put(column_details);
-        }
         json_object_put(tables_root);
-        json_object_put(columns);
+        json_object_put(columns_root);
         idx_table++;
     }
+}
 
-    json_object_put(obj_config);
-    json_object_put(obj_tables);
-    json_object_put(root);
+void read_columns_from_columns_root(GRN* structure, json_object *columns_root) {
+    int idx_column = 0;
+    json_object_object_foreach(columns_root, key_column, value_column) {
+        printf("\tColuna: %s\n", key_column);
 
+        struct json_object *column_details;
+        if (!json_object_object_get_ex(columns_root, key_column, &column_details)) {
+            printf("Detail não encontrado\n");
+        }
+
+        read_values_from_column_root(structure, column_details);        
+
+        
+        json_object_put(column_details);
+        idx_column++;
+    }
+}
+
+void read_values_from_column_root(GRN* structure, json_object *column_details_root) {
+    int idx_value = 0;
+    json_object_object_foreach(column_details_root, key_col_param, value_col_param) {
+        printf("\t\t%s: ",key_col_param);
+        if (json_object_get_type(value_col_param) == json_type_int) {
+            printf("%d\n", json_object_get_int(value_col_param));
+        }
+        else if (json_object_get_type(value_col_param) == json_type_string) {
+            printf("%s\n", json_object_get_string(value_col_param));
+        }
+        else printf("tipo não descrito\n");
+        idx_value++;
+    }
 }
 
 struct json_object* genfile_read_json(const char* file_name) {
