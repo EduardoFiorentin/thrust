@@ -2,6 +2,7 @@
 #include "../main.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MODULE_NAME "GENFILE PARSER"
 #define JSON_KEY_GLOBAL_CONFIGS                 "config"
@@ -137,6 +138,13 @@ void read_global_properties_from_json(GRN* structure, struct json_object* obj_co
         sprintf(buffer_string, "'%s.%s' property is required in the genfile.", JSON_KEY_GLOBAL_CONFIGS, JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME);
         error_print_exit(MODULE_NAME, buffer_string);
     }
+
+    // add target config to structure
+    structure->configs[0].key = JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME;
+    structure->configs[0].value.s = malloc(sizeof(char) * strlen(JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME));
+    strcpy(structure->configs[0].value.s, target);
+    structure->configs[0].type = PARAM_STRING;
+
     printf("Target name: %s\n", target);
 }
 
@@ -224,9 +232,15 @@ int main() {
 
     GRN* genfile_grn = genfile_parser_execute("genfile.json");
 
+    // read target info
+    printf("\n\nTarget info |------------------------------------------------\n");
+    printf("\tKey: %s\n",   genfile_grn->configs[0].key);
+    printf("\tType: %d\n",  genfile_grn->configs[0].type);
+    printf("\tValue: %s\n", genfile_grn->configs[0].value.s);
+
     printf("\n\nTeste de valores gerados |-----------------------------------\n");
     for (int i = 0; i < genfile_grn->num_tables; i++) {
-        printf("%ld\n", genfile_grn->tables[i].num_records);
+        printf("\t%ld\n", genfile_grn->tables[i].num_records);
     }
 
     return 0;
