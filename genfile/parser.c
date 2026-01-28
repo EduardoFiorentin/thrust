@@ -6,24 +6,28 @@
 
 #define MODULE_NAME "GENFILE PARSER"
 #define JSON_KEY_GLOBAL_CONFIGS                 "config"
-#define JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME     "target"
 #define JSON_KEY_TABLES                         "tables"
 #define JSON_KEY_NUMBER_RECORDS                 "num_records"
 #define JSON_KEY_TABLE_COLUMNS                  "columns"
+
+// global properties
+#define JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME     "target"
+#define JSON_KEY_GLOBAL_CONFIGS_BUFFER_SIZE     "buffer_size"
+
 
 typedef struct tableGRN TableGRN;
 typedef struct columnGRN ColumnGRN;
 typedef struct grn GRN;
 
 struct tableGRN {
-    const char*             key;
+    char*             key;
     size_t                  num_records;
     ColumnGRN*              columns;
     size_t                  num_columns;   
 };
 
 struct columnGRN {
-    const char*     key;
+    char*     key;
     Param*          params;
     size_t          num_params;
 };
@@ -59,9 +63,9 @@ typedef struct param {
 
 GRN* genfile_parser_execute(const char* file_name);
 struct json_object* genfile_read_json(const char* file_name);
-void read_columns_from_columns_root(GRN* structure, json_object *columns_root);
+void read_columns_from_columns_root(GRN* structure, json_object *columns_root, int idx_table);
 void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* buffer_string);
-void read_values_from_column_root(GRN* structure, json_object *column_details_root);
+void read_values_from_column_root(GRN* structure, json_object *column_details_root, int idx_table, int idx_column);
 void read_global_properties_from_json(GRN* structure, struct json_object* obj_config, char* buffer_string);
 
 // TODO Remove aux methods -------------------------------------------
@@ -140,12 +144,34 @@ void read_global_properties_from_json(GRN* structure, struct json_object* obj_co
     }
 
     // add target config to structure
-    structure->configs[0].key = JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME;
-    structure->configs[0].value.s = malloc(sizeof(char) * strlen(JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME));
-    strcpy(structure->configs[0].value.s, target);
+    structure->configs[0].key = strdup(JSON_KEY_GLOBAL_CONFIGS_TARGET_NAME);
+    structure->configs[0].value.s = strdup(target);
     structure->configs[0].type = PARAM_STRING;
 
+    // reading config.buffer_size
+    struct json_object *buf_obj;
+    if (!json_object_object_get_ex(obj_config, JSON_KEY_GLOBAL_CONFIGS_BUFFER_SIZE, &buf_obj) ||
+        json_object_get_type(buf_obj) != json_type_int) {
+        sprintf(buffer_string, "'%s.%s' must be an integer.",
+                JSON_KEY_GLOBAL_CONFIGS,
+                JSON_KEY_GLOBAL_CONFIGS_BUFFER_SIZE);
+        error_print_exit(MODULE_NAME, buffer_string);
+    }
+
+    int buffer_size = json_object_get_int(buf_obj);
+
+    if (!buffer_size) {
+        sprintf(buffer_string, "'%s.%s' must be different from zero.", JSON_KEY_GLOBAL_CONFIGS, JSON_KEY_GLOBAL_CONFIGS_BUFFER_SIZE);
+        error_print_exit(MODULE_NAME, buffer_string);
+    }
+
+    // add buffer_size config to structure
+    structure->configs[1].key = strdup(JSON_KEY_GLOBAL_CONFIGS_BUFFER_SIZE);
+    structure->configs[1].value.i = buffer_size;
+    structure->configs[1].type = PARAM_INT;
+
     printf("Target name: %s\n", target);
+    printf("Buffer size: %d\n", buffer_size);
 }
 
 
@@ -168,6 +194,9 @@ void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* 
             error_print_exit(MODULE_NAME, buffer_string);
         }
 
+        // aloc table key (name)
+        structure->tables[idx_table].key = strdup(key_tables);
+
         int num_regs_tobe_gen;
         struct json_object *columns_root;
 
@@ -182,7 +211,15 @@ void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* 
             error_print_exit(MODULE_NAME, buffer_string);
         }
 
-        read_columns_from_columns_root(structure, columns_root);
+        // read number of columns 
+        int num_columns = json_object_object_length(columns_root);
+        printf("\tNum columns: %d\n", num_columns);
+
+        // aloc space to columns for each table
+        structure->tables[idx_table].columns = malloc(sizeof(ColumnGRN) * num_columns);
+        // printf("Teste: %d %d", sizeof(ColumnGRN), sizeof(structure->tables[idx_table].columns));
+
+        read_columns_from_columns_root(structure, columns_root, idx_table);
 
         json_object_put(tables_root);
         json_object_put(columns_root);
@@ -190,7 +227,7 @@ void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* 
     }
 }
 
-void read_columns_from_columns_root(GRN* structure, json_object *columns_root) {
+void read_columns_from_columns_root(GRN* structure, json_object *columns_root, int idx_table) {
     int idx_column = 0;
     json_object_object_foreach(columns_root, key_column, value_column) {
         printf("\tColuna: %s\n", key_column);
@@ -200,7 +237,12 @@ void read_columns_from_columns_root(GRN* structure, json_object *columns_root) {
             printf("Detail não encontrado\n");
         }
 
-        read_values_from_column_root(structure, column_details);        
+        // TODO remember to free strdup
+        structure->tables[idx_table].columns[idx_column].key = strdup(key_column);
+        structure->tables[idx_table].columns[idx_column].num_params = json_object_object_length(value_column);
+        printf("Numero de parametros - testar: %s %ld\n", key_column, structure->tables[idx_table].columns[idx_column].num_params);
+
+        read_values_from_column_root(structure, column_details, idx_table, idx_column);        
 
         
         json_object_put(column_details);
@@ -208,7 +250,7 @@ void read_columns_from_columns_root(GRN* structure, json_object *columns_root) {
     }
 }
 
-void read_values_from_column_root(GRN* structure, json_object *column_details_root) {
+void read_values_from_column_root(GRN* structure, json_object *column_details_root, int idx_table, int idx_column) {
     int idx_value = 0;
     json_object_object_foreach(column_details_root, key_col_param, value_col_param) {
         printf("\t\t%s: ",key_col_param);
@@ -217,6 +259,11 @@ void read_values_from_column_root(GRN* structure, json_object *column_details_ro
         }
         else if (json_object_get_type(value_col_param) == json_type_string) {
             printf("%s\n", json_object_get_string(value_col_param));
+            // pegar o tamanho da string 
+            // alocar memoria para este tamanho
+            // copiar o valor para a variável
+
+
         }
         else printf("tipo não descrito\n");
         idx_value++;
