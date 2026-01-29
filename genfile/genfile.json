@@ -1,7 +1,8 @@
 {
     "config": {
         
-        "target": "sql_file"
+        "target": "sql_file",
+        "buffer_size": 30
 
     },
     "tables": {
@@ -55,11 +56,43 @@
                     "generator_type": "random_int",
                     "min": 0,
                     "max": 100
+                }
+            }
+        },
+        "testes_tipos": {
+            "num_records": 150,
+            "columns": {
+                "serial": {
+                    "generator_type": "serial",
+                    "start": 1,
+                    "step": 1
                 },
-                "created_at": {
-                    "generator_type": "date",
-                    "min": "01/01/1970",
-                    "max": "31/12/2025"
+                "random_int": {
+                    "generator_type": "random_int",
+                    "min": 0,
+                    "max": 100
+                },
+                "phone": {
+                    "generator_type": "phone",
+                    "country": "pt-br"
+                },
+                "name_random_string": {
+                    "generator_type": "random_string",
+                    "min_len": 0,
+                    "max_len": 20
+                },
+                "name" : {
+                    "generator_type": "name_generator",
+                    "min_len": 0,
+                    "max_len": 20
+                },
+                "cpf": {
+                    "generator_type": "cpf_generator"
+                },
+                "email": {
+                    "generator_type": "email_generator",
+                    "min_len": 0,
+                    "max_len": 20
                 }
             }
         }

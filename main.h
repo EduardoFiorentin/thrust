@@ -41,6 +41,7 @@ typedef enum {
     PARAM_INT,
     PARAM_STRING,
     PARAM_FLOAT,
+    PARAM_DOUBLE,
     PARAM_BOOL,
     PARAM_NULL
 } ParamType;
@@ -51,6 +52,7 @@ typedef struct param {
     union {
         int i;
         float f;
+        double d;
         char *s;
         int b;
     } value;

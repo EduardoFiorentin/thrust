@@ -93,7 +93,7 @@ GRN* genfile_parser_execute(const char* file_name) {
     printf("________________| Genfile Description - JSON parser |________________\n");
     printf("_____________________________________________________________________\n");
     printf("\n Global configs: \n");
-    GRN* structure = malloc(sizeof(GRN));
+    GRN* structure = calloc(1, sizeof(GRN));
     
     char buffer_string[100];
     
@@ -119,9 +119,7 @@ GRN* genfile_parser_execute(const char* file_name) {
     printf("Numero de tabelas: %ld\nNumero de configurações globais: %ld\n", structure->num_tables, structure->num_configs);
     
     read_tables_from_table_root(structure, obj_tables, buffer_string);
-    
-    json_object_put(obj_config);
-    json_object_put(obj_tables);
+
     json_object_put(root); 
 
     return structure;
@@ -216,13 +214,11 @@ void read_tables_from_table_root(GRN* structure, json_object *obj_tables, char* 
         printf("\tNum columns: %d\n", num_columns);
 
         // aloc space to columns for each table
+        structure->tables[idx_table].num_columns = num_columns; 
         structure->tables[idx_table].columns = malloc(sizeof(ColumnGRN) * num_columns);
-        // printf("Teste: %d %d", sizeof(ColumnGRN), sizeof(structure->tables[idx_table].columns));
 
         read_columns_from_columns_root(structure, columns_root, idx_table);
 
-        json_object_put(tables_root);
-        json_object_put(columns_root);
         idx_table++;
     }
 }
@@ -231,21 +227,17 @@ void read_columns_from_columns_root(GRN* structure, json_object *columns_root, i
     int idx_column = 0;
     json_object_object_foreach(columns_root, key_column, value_column) {
         printf("\tColuna: %s\n", key_column);
-
-        struct json_object *column_details;
-        if (!json_object_object_get_ex(columns_root, key_column, &column_details)) {
-            printf("Detail não encontrado\n");
-        }
-
+        
         // TODO remember to free strdup
         structure->tables[idx_table].columns[idx_column].key = strdup(key_column);
-        structure->tables[idx_table].columns[idx_column].num_params = json_object_object_length(value_column);
-        printf("Numero de parametros - testar: %s %ld\n", key_column, structure->tables[idx_table].columns[idx_column].num_params);
-
-        read_values_from_column_root(structure, column_details, idx_table, idx_column);        
-
         
-        json_object_put(column_details);
+        // params
+        int num_params = json_object_object_length(value_column);
+        structure->tables[idx_table].columns[idx_column].num_params = num_params;
+        structure->tables[idx_table].columns[idx_column].params = malloc(sizeof(Param) * num_params);
+
+        read_values_from_column_root(structure, value_column, idx_table, idx_column);
+
         idx_column++;
     }
 }
@@ -253,22 +245,46 @@ void read_columns_from_columns_root(GRN* structure, json_object *columns_root, i
 void read_values_from_column_root(GRN* structure, json_object *column_details_root, int idx_table, int idx_column) {
     int idx_value = 0;
     json_object_object_foreach(column_details_root, key_col_param, value_col_param) {
+        Param new_param;
+        new_param.key = strdup(key_col_param);
+
         printf("\t\t%s: ",key_col_param);
         if (json_object_get_type(value_col_param) == json_type_int) {
-            printf("%d\n", json_object_get_int(value_col_param));
+            int value = json_object_get_int(value_col_param);
+            new_param.type = PARAM_INT;
+            new_param.value.i = value;
+
+            printf("%d\n", value);
         }
         else if (json_object_get_type(value_col_param) == json_type_string) {
             printf("%s\n", json_object_get_string(value_col_param));
-            // pegar o tamanho da string 
-            // alocar memoria para este tamanho
-            // copiar o valor para a variável
+            const char* value = json_object_get_string(value_col_param);
+            new_param.type = PARAM_STRING;
+            new_param.value.s = strdup(value);
+        }
 
+        else if (json_object_get_type(value_col_param) == json_type_double) {
+            double value = json_object_get_double(value_col_param);
+            new_param.type = PARAM_DOUBLE;
+            new_param.value.d = value;
 
+            printf("%f\n", value);
+        }
+        else if (json_object_get_type(value_col_param) == json_type_boolean) {
+            int value = json_object_get_boolean(value_col_param);
+            new_param.type = PARAM_BOOL;
+            new_param.value.b = value;
+
+            printf("%d\n", value);
         }
         else printf("tipo não descrito\n");
+
+        structure->tables[idx_table].columns[idx_column].params[idx_value] = new_param;
+
         idx_value++;
     }
 }
+
 
 struct json_object* genfile_read_json(const char* file_name) {
     return json_object_from_file(file_name);
@@ -280,15 +296,77 @@ int main() {
     GRN* genfile_grn = genfile_parser_execute("genfile.json");
 
     // read target info
-    printf("\n\nTarget info |------------------------------------------------\n");
-    printf("\tKey: %s\n",   genfile_grn->configs[0].key);
-    printf("\tType: %d\n",  genfile_grn->configs[0].type);
-    printf("\tValue: %s\n", genfile_grn->configs[0].value.s);
 
     printf("\n\nTeste de valores gerados |-----------------------------------\n");
     for (int i = 0; i < genfile_grn->num_tables; i++) {
         printf("\t%ld\n", genfile_grn->tables[i].num_records);
     }
 
+    printf("\n\nTeste de impressão das informações dos objetos\n");
+    printf("\nTarget info |------------------------------------------------\n");
+    printf("\tKey: %s\n",   genfile_grn->configs[0].key);
+    printf("\tType: %d\n",  genfile_grn->configs[0].type);
+    printf("\tValue: %s\n", genfile_grn->configs[0].value.s);
+    printf("\nbuffer info |------------------------------------------------\n");
+    printf("\tKey: %s\n",   genfile_grn->configs[1].key);
+    printf("\tType: %d\n",  genfile_grn->configs[1].type);
+    printf("\tValue: %d\n", genfile_grn->configs[1].value.i);
+
+    printf("\nInformações das tabelas |-------------------------------------\n");
+
+    for (int idx_table = 0; idx_table < genfile_grn->num_tables; idx_table++) {
+        printf("Table %d - %s\n", idx_table, genfile_grn->tables[idx_table].key);
+        for (
+            int idx_col = 0; 
+            idx_col < genfile_grn->tables[idx_table].num_columns; 
+            idx_col++
+        ) {
+            printf("\tColumn: %d - %s\n", idx_col, genfile_grn->tables[idx_table].columns[idx_col].key);
+            for (
+                int idx_param = 0;
+                idx_param < genfile_grn->tables[idx_table].columns[idx_col].num_params;
+                idx_param++
+            ) {
+                printf("\t\tField: %d - %s: ", idx_param, genfile_grn->tables[idx_table].columns[idx_col].params[idx_param].key);
+                if (genfile_grn->tables[idx_table].columns[idx_col].params[idx_param].type == PARAM_INT) {
+                    printf("%d\n", genfile_grn->tables[idx_table].columns[idx_col].params[idx_param].value.i);
+                }
+                else if (genfile_grn->tables[idx_table].columns[idx_col].params[idx_param].type == PARAM_STRING) {
+                    printf("%s\n", genfile_grn->tables[idx_table].columns[idx_col].params[idx_param].value.s);
+                }
+                else if (genfile_grn->tables[idx_table].columns[idx_col].params[idx_param].type == PARAM_BOOL) {
+                    printf("%d\n", genfile_grn->tables[idx_table].columns[idx_col].params[idx_param].value.b);
+                }
+
+            }   
+        }
+    }
+
     return 0;
 }
+
+/*
+
+Idea to free memory - test better 
+void free_grn(GRN* g) {
+    for (size_t i = 0; i < g->num_configs; i++) {
+        free(g->configs[i].key);
+        if (g->configs[i].type == PARAM_STRING)
+            free(g->configs[i].value.s);
+    }
+    free(g->configs);
+
+    for (size_t t = 0; t < g->num_tables; t++) {
+        free(g->tables[t].key);
+        for (size_t c = 0; c < g->tables[t].num_columns; c++) {
+            free(g->tables[t].columns[c].key);
+            // liberar params aqui depois
+        }
+        free(g->tables[t].columns);
+    }
+    free(g->tables);
+    free(g);
+}
+
+
+*/
